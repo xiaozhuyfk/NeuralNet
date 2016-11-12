@@ -1,5 +1,5 @@
 import logging, globals
-from util import load_mnist_X, load_mnist_Y, load_regression_X, load_regression_Y, z_norm
+from util import load_mnist_X, load_mnist_Y, load_regression_X, load_regression_Y, z_norm, writeFile
 from model import Model, Layer
 from activations import Activation
 
@@ -31,13 +31,12 @@ def train(dataset):
         ytest = load_regression_Y(task_path + "regr_ytest.txt")
         yval = load_regression_Y(task_path + "regr_yval.txt")
     else:
-        logger.info("Invalid task.")
+        logger.warning("Invalid task.")
         return
+    logger.info("Load data complete.")
 
-
-    n, input_dim = Xtrain.shape
-    #print ytrain.shape
-
+    # build model
+    N, input_dim = Xtrain.shape
     model = Model()
     model.add(
         Layer(output_dim=globals.layer_dim,
@@ -51,9 +50,25 @@ def train(dataset):
     )
 
     model.compile(loss=loss)
-    model.fit(Xtrain, ytrain,
-              batch_size=n,
-              iterations=globals.iterations)
+    history = model.fit(Xtrain, ytrain,
+                        batch_size=N,
+                        iterations=globals.iterations,
+                        validation_data=(Xval, yval))
+
+    # save result
+    result_dir = config_options.get('Result', 'result-dir')
+    file_name = "_".join([dataset,
+                          activation,
+                          str(globals.alpha),
+                          str(globals.lam),
+                          str(globals.layer_dim),
+                          str(globals.iterations)]) + ".txt"
+    file_path = result_dir + file_name
+    writeFile(file_path, "")
+    for datum in history:
+        datum = [str(x) for x in datum]
+        line = "\t".join(datum) + "\n"
+        writeFile(file_path, line, 'a')
 
 
 def test(dataset):

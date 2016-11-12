@@ -1,5 +1,6 @@
 import logging, math, globals
 import numpy as np
+from activations import softmax
 
 logging.basicConfig(format='%(asctime)s : %(levelname)s '
                            ': %(module)s : %(message)s',
@@ -22,6 +23,8 @@ class BinaryCrossentropy(object):
             return 0
 
         O = self.model.predict(X)
+        #O = self.model.output
+
         for i in xrange(N):
             o = O[i]
             y = Y[i]
@@ -30,12 +33,25 @@ class BinaryCrossentropy(object):
 
         weight_sum = 0
         for layer in self.model.layers:
-            weight_sum += np.linalg.norm(layer.W)**2
+            if layer.W is not None:
+                weight_sum += np.linalg.norm(layer.W)**2
 
         return loss + lam * weight_sum / 2
 
     def apply_grad(self, X, Y):
-        pass
+        N, _ = X.shape
+        gradients = []
+        output = self.model.predict(X)
+        self.model.output = output
+
+        for i in xrange(N):
+            yi = Y[i:i+1]
+            oi = output[i:i+1]
+            loss = 1.0/N * (softmax(oi) - yi)
+            gradients.append(loss)
+        self.model.layers[-1].apply_grad(X, Y, gradients)
+
+        return self(X, Y)
 
 class MSE(object):
 

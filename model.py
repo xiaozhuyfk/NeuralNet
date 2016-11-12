@@ -1,5 +1,3 @@
-#from keras.layers import Input, LSTM, Dense, Embedding, Merge, Bidirectional
-#from keras.models import model_from_json, Sequential
 import logging
 import globals
 import numpy as np
@@ -19,18 +17,26 @@ class Model(object):
         self.layers = []
 
     def add(self, layer):
-        if isinstance(layer, Layer):
-            layer.build()
-
         if (self.layers == []):
+            if layer.input_dim is None:
+                logger.warning("First layer has no input dimension.")
             self.layers.append(layer)
         else:
             last_layer = self.layers[-1]
             layer.prev = last_layer
 
-            if isinstance(layer, Activation):
+            if isinstance(layer, Layer):
                 layer.input_dim = last_layer.output_dim
+            elif isinstance(layer, Activation):
+                layer.input_dim = last_layer.output_dim
+                layer.output_dim = layer.input_dim
             self.layers.append(layer)
+
+        assert(layer.output_dim is not None)
+        assert(layer.input_dim is not None)
+
+        if isinstance(layer, Layer):
+            layer.build()
 
 
     def compile(self, loss):
@@ -42,17 +48,24 @@ class Model(object):
             logger.warning("Invalid loss function.")
             self.loss = None
 
+    def evaluate(self, X, Y):
+        N, _ = X.shape
+        pred_val = self.predict(X)
+        y_answer = np.argmax(Y, axis=1)
+        pred_answer = np.argmax(pred_val, axis=1)
+        accuracy = 1 - float(np.sum(abs(y_answer - pred_answer))) / N
+        return accuracy
 
     def fit(self,
             X, Y,
             batch_size=32,
             iterations=500,
             validation_data=None):
+        N, _ = X.shape
         history = []
         batches = range(N / batch_size)
         batches = [(i * batch_size, (i+1) * batch_size) for i in batches]
-        for epoch in xrange(iterations):
-            N, _ = X.shape
+        for epoch in xrange(1, iterations+1):
             np.random.shuffle(batches)
             total_loss = 0
             for start, end in batches:
@@ -61,9 +74,26 @@ class Model(object):
                 loss = self.loss.apply_grad(batchX, batchY)
                 total_loss += loss
 
-                if validation_data is not None:
-                    pass
-            history.append((epoch, total_loss))
+            train_accuracy = self.evaluate(X, Y)
+            if validation_data is not None:
+                Xval = validation_data[0]
+                yval = validation_data[1]
+                val_accuracy = self.evaluate(Xval, yval)
+                val_loss = self.loss(Xval, yval)
+            else:
+                val_accuracy = "NO EVALUATION DATA"
+                val_loss = "NO EVALUATION DATA"
+
+            history.append([epoch, total_loss, val_loss, train_accuracy, val_accuracy])
+
+            print '-----------------------'
+            print 'Epoch', epoch
+            print 'Total Training Loss:', total_loss
+            print 'Total Validation Loss', val_loss
+            print 'Training Accuracy:', train_accuracy
+            print 'Validation Accuracy:', val_accuracy
+            print '-----------------------'
+
         return history
 
 
@@ -91,8 +121,6 @@ class Layer(object):
         self.initializer = initializer
         self.prev = None
         self.next = None
-        #self.activation = getattr(activations, activation)
-        #self.W_regularizer = W_regularizer
 
     def build(self):
         self.W = self.initializer((self.input_dim, self.output_dim))
@@ -103,7 +131,44 @@ class Layer(object):
 
     def call(self, x):
         if self.prev is None:
-            return self.__call__(x)
+            self.output = self.__call__(x)
+            return self.output
         else:
-            return self.__call__(self.prev.call(x))
+            self.output = self.__call__(self.prev.call(x))
+            return self.output
+
+    def apply_grad(self, X, Y, gradients):
+        lam = globals.lam
+        alpha = globals.alpha
+
+        W_gradients = []
+        b_gradients = []
+        if self.prev is None:
+            for i in xrange(len(gradients)):
+                grad = gradients[i]
+                xi = X[i:i+1]
+                W_gradients.append(np.outer(xi, grad))
+                b_gradients.append(grad)
+            self.W -= alpha * (sum(W_gradients) + lam * self.W)
+            self.b -= alpha * (sum(b_gradients))
+            return
+
+        assert(self.prev is not None)
+        #output = self.prev.call(X)
+        output = self.prev.output
+        for i in xrange(len(gradients)):
+            grad = gradients[i]
+            oi = output[i:i+1]
+            W_gradients.append(np.outer(oi, grad))
+            b_gradients.append(grad)
+            gradients[i] = np.dot(grad, np.transpose(self.W))
+
+        # update weight matrix
+        self.W -= alpha * (sum(W_gradients) + lam * self.W)
+        self.b -= alpha * (sum(b_gradients))
+
+        self.prev.apply_grad(X, Y, gradients)
+
+
+
 

@@ -1,4 +1,5 @@
 import numpy as np
+import logging
 
 logging.basicConfig(format='%(asctime)s : %(levelname)s '
                            ': %(module)s : %(message)s',
@@ -21,6 +22,8 @@ class Activation(object):
     def __init__(self, activation):
         self.prev = None
         self.next = None
+        self.W = None
+        self.b = None
         if activation == "softmax":
             self.activation = Softmax()
         elif activation == "sigmoid":
@@ -35,21 +38,33 @@ class Activation(object):
 
     def call(self, x):
         if self.prev is None:
-            return self.__call__(x)
+            self.output = self.__call__(x)
+            return self.output
         else:
-            return self.__call__(self.prev.call(x))
+            self.output = self.__call__(self.prev.call(x))
+            return self.output
+
+    def apply_grad(self, X, Y, gradients):
+        assert(self.prev is not None)
+
+        #output = self.prev.call(X)
+        output = self.prev.output
+        for i in xrange(len(gradients)):
+            oi = output[i:i+1]
+            gradients[i] *= self.activation.grad(oi)
+        self.prev.apply_grad(X, Y, gradients)
 
 class Softmax(object):
 
     def softmax(self, x):
         exp = np.exp(x)
-        return x / sum(exp)
+        return exp / exp.sum(axis=1)
 
     def __call__(self, x):
         return self.softmax(x)
 
     def grad(self, x):
-        pass
+        return NotImplemented
 
 class Sigmoid(object):
 
@@ -60,6 +75,9 @@ class Sigmoid(object):
     def __call__(self, x):
         return self.sigmoid(x)
 
+    def grad(self, x):
+        return self(x) * (1 - self(x))
+
 class ReLU(object):
 
     def relu(self, x):
@@ -67,3 +85,6 @@ class ReLU(object):
 
     def __call__(self, x):
         return self.relu(x)
+
+    def grad(self, x):
+        return (x > 0) * 1.0
