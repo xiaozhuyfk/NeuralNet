@@ -35,7 +35,7 @@ def load_mnist_X(path):
 
 def load_mnist_Y(path):
     lines = readFile(path).strip().split("\n")
-    Y = [int(n) for n in lines]
+    Y = [[(int(n) == 0) * 1, (int(n) == 1) * 1] for n in lines]
     return np.array(Y, dtype=np.float32)
 
 def load_regression_X(path):
@@ -55,5 +55,5 @@ def z_norm(X):
     stdev = variance**0.5
     for i in xrange(n):
         if stdev[i] == 0:
-            stdev[i] == 1
+            stdev[i] = 1
     return (X - means) / stdev

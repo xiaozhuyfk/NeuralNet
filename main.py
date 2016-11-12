@@ -1,5 +1,7 @@
 import logging, globals
 from util import load_mnist_X, load_mnist_Y, load_regression_X, load_regression_Y, z_norm
+from model import Model, Layer
+from activations import Activation
 
 logging.basicConfig(format='%(asctime)s : %(levelname)s '
                            ': %(module)s : %(message)s',
@@ -11,6 +13,8 @@ logger = logging.getLogger(__name__)
 def train(dataset):
     config_options = globals.config
     task_path = config_options.get("Data", dataset)
+    loss = config_options.get('Train', 'loss')
+    activation = config_options.get('Train', 'activation')
 
     if dataset == "classify":
         Xtrain = z_norm(load_mnist_X(task_path + "classf_Xtrain.txt"))
@@ -28,6 +32,29 @@ def train(dataset):
         yval = load_regression_Y(task_path + "regr_yval.txt")
     else:
         logger.info("Invalid task.")
+        return
+
+
+    n, input_dim = Xtrain.shape
+    #print ytrain.shape
+
+    model = Model()
+    model.add(
+        Layer(output_dim=globals.layer_dim,
+              input_dim=input_dim)
+    )
+    model.add(
+        Layer(output_dim=globals.output_dim)
+    )
+    model.add(
+        Activation(activation=activation)
+    )
+
+    model.compile(loss=loss)
+    model.fit(Xtrain, ytrain,
+              batch_size=n,
+              iterations=globals.iterations)
+
 
 def test(dataset):
     pass
