@@ -90,8 +90,8 @@ class Model(object):
             print 'Epoch', epoch
             print 'Total Training Loss:', total_loss
             print 'Total Validation Loss', val_loss
-            print 'Training Accuracy:', train_accuracy
-            print 'Validation Accuracy:', val_accuracy
+            #print 'Training Accuracy:', train_accuracy
+            #print 'Validation Accuracy:', val_accuracy
             print '-----------------------'
 
         return history

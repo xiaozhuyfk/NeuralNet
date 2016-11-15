@@ -37,16 +37,17 @@ def train(dataset):
 
     # build model
     N, input_dim = Xtrain.shape
+
     model = Model()
     model.add(
         Layer(output_dim=globals.layer_dim,
               input_dim=input_dim)
     )
     model.add(
-        Layer(output_dim=globals.output_dim)
+        Activation(activation=activation)
     )
     model.add(
-        Activation(activation=activation)
+        Layer(output_dim=globals.output_dim)
     )
 
     model.compile(loss=loss)
@@ -69,6 +70,9 @@ def train(dataset):
         datum = [str(x) for x in datum]
         line = "\t".join(datum) + "\n"
         writeFile(file_path, line, 'a')
+
+    #print model.evaluate(Xval, yval)
+    #print model.evaluate(Xtest, ytest)
 
 
 def test(dataset):

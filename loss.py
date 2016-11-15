@@ -59,4 +59,35 @@ class MSE(object):
         self.model = model
 
     def __call__(self, X, Y):
-        return 0
+        N, _ = X.shape
+        loss = 0
+        lam = globals.lam
+
+        if len(self.model.layers) == 0:
+            logger.warning("No loss computed. Empty layers.")
+            return 0
+
+        O = self.model.predict(X)
+        loss = np.linalg.norm(O - Y)**2 / N
+
+        weight_sum = 0
+        for layer in self.model.layers:
+            if layer.W is not None:
+                weight_sum += np.linalg.norm(layer.W)**2
+
+        return loss + lam * weight_sum / 2
+
+    def apply_grad(self, X, Y):
+        N, _ = X.shape
+        gradients = []
+        output = self.model.predict(X)
+        self.model.output = output
+
+        for i in xrange(N):
+            yi = Y[i:i+1]
+            oi = output[i:i+1]
+            loss = 2 * (oi - yi) / N
+            gradients.append(loss)
+        self.model.layers[-1].apply_grad(X, Y, gradients)
+
+        return self(X, Y)

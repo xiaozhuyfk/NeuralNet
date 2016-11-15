@@ -45,7 +45,7 @@ def load_regression_X(path):
 
 def load_regression_Y(path):
     lines = readFile(path).strip().split("\n")
-    Y = [float(n) for n in lines]
+    Y = [[float(n)] for n in lines]
     return np.array(Y, dtype=np.float32)
 
 def z_norm(X):
