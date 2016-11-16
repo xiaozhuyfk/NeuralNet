@@ -49,6 +49,9 @@ class Model(object):
             self.loss = None
 
     def evaluate(self, X, Y):
+        if isinstance(self.loss, MSE):
+            return self.loss.mse(X, Y)
+
         N, _ = X.shape
         pred_val = self.predict(X)
         y_answer = np.argmax(Y, axis=1)
@@ -90,8 +93,8 @@ class Model(object):
             print 'Epoch', epoch
             print 'Total Training Loss:', total_loss
             print 'Total Validation Loss', val_loss
-            #print 'Training Accuracy:', train_accuracy
-            #print 'Validation Accuracy:', val_accuracy
+            print 'Training Accuracy:', train_accuracy
+            print 'Validation Accuracy:', val_accuracy
             print '-----------------------'
 
         return history

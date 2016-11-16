@@ -60,7 +60,6 @@ class MSE(object):
 
     def __call__(self, X, Y):
         N, _ = X.shape
-        loss = 0
         lam = globals.lam
 
         if len(self.model.layers) == 0:
@@ -76,6 +75,17 @@ class MSE(object):
                 weight_sum += np.linalg.norm(layer.W)**2
 
         return loss + lam * weight_sum / 2
+
+    def mse(self, X, Y):
+        N, _ = X.shape
+
+        if len(self.model.layers) == 0:
+            logger.warning("No loss computed. Empty layers.")
+            return 0
+
+        O = self.model.predict(X)
+        loss = np.linalg.norm(O - Y)**2 / N
+        return loss
 
     def apply_grad(self, X, Y):
         N, _ = X.shape

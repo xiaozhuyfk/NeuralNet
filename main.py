@@ -71,6 +71,9 @@ def train(dataset):
         line = "\t".join(datum) + "\n"
         writeFile(file_path, line, 'a')
 
+    print model.loss.mse(Xval, yval)
+    print model.loss.mse(Xtest, ytest)
+
     #print model.evaluate(Xval, yval)
     #print model.evaluate(Xtest, ytest)
 
